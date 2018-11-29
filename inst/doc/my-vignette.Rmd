@@ -1,10 +1,10 @@
 ---
-title: "DeconCell"
+title: "DeconCell quick start and tutorial"
 author: "Raúl Aguirre-Gamboa and Niek de Klein"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteIndexEntry{DeconCell quick start and tutorial}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -44,8 +44,8 @@ head(prediction$dCell.prediction)
 head(prediction$Evaluation)
 ```
 
-## Correlation coeficient between of predicted and measured values
-```{r evaluation}
+### Correlation coeficient between of predicted and measured values
+```{r evaluation, fig.align = "center", fig.width=7, fig.height=10}
 data("cell.proportions")
 library(reshape2)
 library(ggplot2)
@@ -53,12 +53,14 @@ data("dCell.names")
 pData <- data.frame(PearsonCor= diag(cor(cell.proportions, prediction$dCell.prediction)), 
                     CTs = dCell.names[colnames(cell.proportions), "finalName"], 
                     Subpop = dCell.names[colnames(cell.proportions), "broadSubpopulations"])
+
 ggplot(pData, aes(y=PearsonCor , x= CTs, fill=Subpop))+
   geom_bar(stat="identity", alpha=0.8)+
   geom_hline(yintercept = 0.5, alpha=0.5, color="red")+
   coord_flip()+
   scale_fill_brewer(palette = "Dark2")+
-  theme_bw()
+  theme_bw()+
+  theme(legend.position = "bottom", text=element_text(size=11, family="Helvetica"))
   
 ```
 
@@ -85,7 +87,7 @@ As the package indicates this is "real data" which has been mixed in silico, the
 > For the mixtures, there are 28745 genes. And we have 10 samples. In silico mixed data were simulated using ([2]) data, with disparate proportions drawn from random numbers. The mixing proportions used by each type of tissue are shown in the following. It should also be noted that we investigated the influence of extremely low numbers of contaminating cell types (<2 percent).
 
 We will run DeconCell for each of the proportions using 60% of the samples for training our models.
-```{r dCell.run models}
+```{r dCell.run models, message = FALSE, warning=FALSE}
 set.seed(1121)
 sampled.train <- sample(colnames(exp), size = 6, replace = FALSE)
 #use the rest of the samples for testing the models
@@ -98,13 +100,16 @@ new.dCell.models <- dCell.run(exp = exp[,sampled.train],
 
 ```
 
+
+### Testing the prediction of the new models.
 Now we will use \code{dCell.predict} function to use the newly created models to predict the proportions on the defined test set (\code{sampled.test})
 In the \code{DeconRNASeq} vignette, the author use the Root Mean Square Error (RMSE), which is the standard deviation from the residuals, as a measure of prediction performance. 
-```{r dCell.run eval}
+```{r dCell.run eval, fig.align = "center", fig.width=7, fig.height=5}
 
 test.prediction <- dCell.predict(exp[,sampled.test],
                                  dCell.models= new.dCell.models$deconCell.models.per.CT, 
                                  res.type = "median", custom = TRUE)
+# we use custom=TRUE to keep the original names of the proportions.
 
 # reshape the data for plotting 
 pData <- reshape2::melt(as.matrix(proportions[sampled.test,]))
@@ -132,5 +137,7 @@ decon.cell.tissue.plot <- ggplot(pData, aes(x= value, y=Predicted))+
                           theme(text = element_text(family = "Helvetica", size = 10), legend.position = "none")
 
 
+plot(decon.cell.tissue.plot)
 ```
 
+As seen in the plot above, we have been able to accurately predict the proportions of the tissues within the bulk expression data by using the models generated with \code{dCell.run}. 
